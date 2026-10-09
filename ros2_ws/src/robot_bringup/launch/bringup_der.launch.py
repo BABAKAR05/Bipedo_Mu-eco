@@ -13,6 +13,12 @@ Este launch inicia:
        - Calcula/procesa la cinemática.
        - Publica /robot/joint_targets.
 
+    2.1. ik_node, ik_newton_node, ik_des_node, ik_geom_node, ik_grad_node
+       - Cinemática inversa por los métodos algebraico, Newton-Raphson,
+         desacople, geométrico y gradiente descendente.
+       - Cada uno recibe el objetivo en /robot/<metodo>_target y
+         publica q1, q2, q3 en /robot/<metodo>_result.
+
     3. control_node
        - Recibe /robot/joint_targets.
        - Aplica los límites de seguridad articulares.
@@ -125,8 +131,8 @@ def generate_launch_description():
     xacro_file = os.path.join(
         pkg_desc,
         'urdf',
-        'urdf_der',
-        'pata_der.urdf.xacro'
+        'urdf_bipedo',
+        'muneco_bipedo.urdf.xacro'
     )
 
 
@@ -181,6 +187,36 @@ def generate_launch_description():
 
 
     # ==================================================================
+    # 1b. JOINT STATE PUBLISHER (completa el muñeco)
+    # ==================================================================
+    #
+    # El modelo es el muñeco completo (6 joints), pero control_node
+    # solo publica los 3 joints de esta pierna en /joint_states_pata.
+    # joint_state_publisher toma esos 3 valores y publica en
+    # /joint_states los 6 joints, dejando en 0 los de la otra pierna.
+
+    joints_muneco = Node(
+        package='joint_state_publisher',
+
+        executable='joint_state_publisher',
+
+        name='joint_state_publisher',
+
+        parameters=[
+            {
+                'robot_description':
+                    ParameterValue(
+                        robot_description,
+                        value_type=str
+                    ),
+                'source_list': ['/joint_states_pata'],
+                'rate': 30
+            }
+        ]
+    )
+
+
+    # ==================================================================
     # 2. NODO DE CINEMÁTICA
     # ==================================================================
 
@@ -200,6 +236,111 @@ def generate_launch_description():
 
 
     # ==================================================================
+    # 2.1. NODO DE CINEMÁTICA INVERSA (ALGEBRAICO)
+    # ==================================================================
+    #
+    # /robot/ik_target -> /robot/ik_result
+
+    ik = Node(
+        package='robot_kinematics',
+
+        executable='ik_node',
+
+        name='ik_node',
+
+        parameters=[
+            {
+                'leg_side': 'right'
+            }
+        ]
+    )
+
+
+    # ==================================================================
+    # 2.2. NODO DE CINEMÁTICA INVERSA (NEWTON-RAPHSON)
+    # ==================================================================
+    #
+    # /robot/ik_newton_target -> /robot/ik_newton_result
+
+    ik_newton = Node(
+        package='robot_kinematics',
+
+        executable='ik_newton_node',
+
+        name='ik_newton_node',
+
+        parameters=[
+            {
+                'leg_side': 'right'
+            }
+        ]
+    )
+
+
+    # ==================================================================
+    # 2.3. NODO DE CINEMÁTICA INVERSA (DESACOPLE)
+    # ==================================================================
+    #
+    # /robot/ik_des_target -> /robot/ik_des_result
+
+    ik_des = Node(
+        package='robot_kinematics',
+
+        executable='ik_des_node',
+
+        name='ik_des_node',
+
+        parameters=[
+            {
+                'leg_side': 'right'
+            }
+        ]
+    )
+
+
+    # ==================================================================
+    # 2.4. NODO DE CINEMÁTICA INVERSA (GEOMÉTRICO)
+    # ==================================================================
+    #
+    # /robot/ik_geom_target -> /robot/ik_geom_result
+
+    ik_geom = Node(
+        package='robot_kinematics',
+
+        executable='ik_geom_node',
+
+        name='ik_geom_node',
+
+        parameters=[
+            {
+                'leg_side': 'right'
+            }
+        ]
+    )
+
+
+    # ==================================================================
+    # 2.5. NODO DE CINEMÁTICA INVERSA (GRADIENTE DESCENDENTE)
+    # ==================================================================
+    #
+    # /robot/ik_grad_target -> /robot/ik_grad_result
+
+    ik_grad = Node(
+        package='robot_kinematics',
+
+        executable='ik_grad_node',
+
+        name='ik_grad_node',
+
+        parameters=[
+            {
+                'leg_side': 'right'
+            }
+        ]
+    )
+
+
+    # ==================================================================
     # 3. NODO DE CONTROL
     # ==================================================================
 
@@ -209,6 +350,10 @@ def generate_launch_description():
         executable='control_node',
 
         name='control_node',
+
+        remappings=[
+            ('/joint_states', '/joint_states_pata')
+        ],
 
         parameters=[
             {
@@ -342,7 +487,13 @@ def generate_launch_description():
 
         # Nodos.
         description,
+        joints_muneco,
         kinematics,
+        ik,
+        ik_newton,
+        ik_des,
+        ik_geom,
+        ik_grad,
         control,
         sim,
         teleop,
