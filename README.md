@@ -319,3 +319,4 @@ Antes de integrar cambios al proyecto se deberán verificar:
 5. Actualización de la documentación cuando sea necesario.
 
 El objetivo es mantener un repositorio organizado, reproducible y escalable durante todo el desarrollo del robot.
+# Bipedo_Mu-eco
