@@ -63,8 +63,14 @@ robot_simulation
 firmware/esp32_servos
   Firmware de la ESP32 (PlatformIO + micro-ROS). Controla los 6 servos (3 por
   pierna) con PWM directo desde los GPIO 18, 19, 23, 25, 26 y 27, sin PCA9685.
-  Se suscribe a /servo_commands (6 valores: IZQ roll/pitch/knee, DER roll/pitch/knee;
-  NaN = no mover) y publica /servo_states. Ver su README.
+  - Ángulos lógicos en grados: 0 = 1500 µs (posición de reposo).
+  - Cada servo tiene su escala (270° o 180°), su sentido y sus límites
+    (todo en include/servo_params.h).
+  - Movimiento suave: 50 Hz, velocidad máxima 60 °/s y aceleración máxima 120 °/s².
+    Son valores nominales, sin medir en el robot.
+  - Se suscribe a /servo_commands (6 valores: IZQ roll/pitch/knee, DER roll/pitch/knee,
+    en grados lógicos; NaN = no mover; menos de 6 valores = mensaje ignorado)
+    y publica /servo_states. Ver su README.
 
 ## Tópicos y nodos
 
@@ -110,7 +116,7 @@ Cambiar el modo en vivo:
 
 ## Límites de los motores
 
-El ángulo de cada motor se limita en tres lugares. No están sincronizados por
+El ángulo de cada motor se limita en cuatro lugares. No están sincronizados por
 un solo origen: hay que mantenerlos a mano.
 
 1. URDF (robot_description): <limit> de diseño. Referencia, ningún nodo la lee.
@@ -122,11 +128,13 @@ un solo origen: hay que mantenerlos a mano.
      ros2 param set /control_node joint_limits_lower "[-0.261799, -1.5708, -1.5708]"
      ros2 param set /control_node joint_limits_upper "[1.5708, 1.5708, 1.5708]"
 3. teleop_node.py (robot_teleop): rango de los sliders en grados. NO es un
-   parámetro ROS: está fijo en el código como lower_deg = [0, -90, -90] y
+   parámetro ROS: está fijo en el código como lower_deg = [-15, -90, -90] y
    upper_deg = [90, 90, 90]. Para cambiarlo hay que editar teleop_node.py.
+4. firmware (servo_params.h): límites lógicos en grados de cada servo, con
+   los mismos valores que teleop: cadera roll de -15 a 90, cadera pitch y
+   rodilla de -90 a 90. Para cambiarlos hay que recompilar y cargar el firmware.
 
-Hoy el límite inferior de cadera-roll es distinto en teleop (0°) y en control
-(-15°). Si se quieren iguales, hay que ajustarlos juntos.
+Los cuatro deben quedar iguales. Hoy coinciden.
 
 ## Signo de la rodilla
 
@@ -135,6 +143,11 @@ control_node invierte el signo de la rodilla (índice 2) antes de publicar en
 trabajo es que +Knee Pitch recoge la rodilla. teleop recibe el estado ya
 invertido: hay que confirmar en el robot que la visualización de teleop no
 vuelve a invertirla.
+
+El firmware, por su parte, aplica el sentido de cada servo (campo `dir` en
+servo_params.h). Por eso el sentido de la rodilla en el firmware no es el mismo
+que el de control_node, y RViz y el robot físico pueden moverse en sentidos
+opuestos. Pendiente decidir si se quita la inversión de control_node.
 
 ## Paro de emergencia (pendiente)
 
@@ -181,6 +194,8 @@ el bringup corre y que `ros2 topic echo /joint_states` trae datos.
 
 ## Pendiente
 
+- Decidir la inversión de la rodilla en control_node (ver sección anterior).
+- Calibrar en el robot las escalas, los límites, el reposo y el perfil de velocidad del firmware.
 - Cinemática: aplicar la cinemática inversa al flujo principal (kinematics_node).
 - Descripción: URDF combinado de las dos piernas (torso/pelvis común).
 - Simulación: mundo Gazebo real y controlador de posición.
