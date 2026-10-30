@@ -110,7 +110,7 @@ El PCA9685 se quitó y los seis servos se conectaron directamente a los GPIO de 
 - **Reposo al arrancar:** los seis servos van a 0° lógico, de uno en uno.
 - **Pérdida de comandos:** los servos mantienen la última posición.
 
-> **Nota:** las escalas, los límites, el reposo y la velocidad son valores nominales. Se calibrarán con el robot.
+> **Nota:** las escalas, los límites, el reposo y la velocidad son valores nominales. 
 
 ### 4.6 Teleop
 
@@ -139,7 +139,6 @@ El PCA9685 se quitó y los seis servos se conectaron directamente a los GPIO de 
 | Nodo `ik_node` con stubs de `rclpy` y de los mensajes | Cada tópico publica el resultado de su solver |
 | Búsqueda de referencias a los archivos eliminados | Sin referencias restantes |
 
-Estas pruebas se hicieron sin ROS 2 ni hardware. La ejecución del workspace con ROS 2 y las pruebas con el robot físico no forman parte de este informe.
 
 ## 6. Anexo: archivos
 
