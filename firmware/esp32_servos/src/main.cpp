@@ -55,7 +55,8 @@ float state_data[NUM_SERVOS];
 // Objetivos y posiciones actuales para transicion suave
 float target_angle[NUM_SERVOS];
 float current_angle[NUM_SERVOS];
-unsigned long last_move_time = 0;
+float current_vel[NUM_SERVOS];           // velocidad actual [grados/s]
+unsigned long last_update_ms = 0;
 
 // Antibacklash
 const bool ANTI_BACKLASH = true;
@@ -108,25 +109,35 @@ void cmd_callback(const void* msgin) {
         ang = clampValue(ang, SERVO_PARAMS[i].angleMin, SERVO_PARAMS[i].angleMax);
         target_angle[i] = ang;
     }
-    last_move_time = millis();
 }
 
 // ============================================================
-// Mueve los servos un paso hacia sus objetivos (sin saltos bruscos)
+// Mueve los servos hacia sus objetivos con perfil de velocidad:
+// acelera hasta SERVO_MAX_SPEED, y frena a tiempo para llegar al
+// objetivo sin pasarse. dt en segundos.
 // ============================================================
-void update_servos() {
+void update_servos(float dt) {
     for (int i = 0; i < NUM_SERVOS; i++) {
         float diff = target_angle[i] - current_angle[i];
 
-        if (fabsf(diff) > 1.0f) {
-            float step = (diff > 0.0f) ? 0.3f : -0.3f;
-            current_angle[i] += step;
-            current_angle[i] = clampValue(current_angle[i],
-                                          SERVO_PARAMS[i].angleMin,
-                                          SERVO_PARAMS[i].angleMax);
-        } else {
+        // Velocidad desde la que todavía se puede frenar hasta el objetivo
+        float brake_v = sqrtf(2.0f * SERVO_ACCEL * fabsf(diff));
+        float want_v = (diff > 0.0f) ? brake_v : -brake_v;
+        want_v = clampValue(want_v, -SERVO_MAX_SPEED, SERVO_MAX_SPEED);
+
+        // La velocidad cambia como máximo SERVO_ACCEL por segundo
+        float max_dv = SERVO_ACCEL * dt;
+        float vel = current_vel[i] + clampValue(want_v - current_vel[i], -max_dv, max_dv);
+
+        float step = vel * dt;
+        if (fabsf(step) >= fabsf(diff)) {
+            // Llega en este paso: se fija en el objetivo y se detiene
             current_angle[i] = target_angle[i];
+            vel = 0.0f;
+        } else {
+            current_angle[i] += step;
         }
+        current_vel[i] = vel;
 
         // Escribir el PWM del GPIO del servo
         writeServo(i, current_angle[i]);
@@ -232,8 +243,12 @@ void setup() {
 // Loop
 // ============================================================
 void loop() {
-    if (millis() - last_move_time < 5 || millis() - last_move_time > 20) {
-        update_servos();
+    unsigned long now = millis();
+    if (now - last_update_ms >= SERVO_UPDATE_MS) {
+        // dt limitado para que un bloqueo largo no dé un salto grande
+        float dt = clampValue((now - last_update_ms) / 1000.0f, 0.0f, 0.1f);
+        last_update_ms = now;
+        update_servos(dt);
     }
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
     delay(1);

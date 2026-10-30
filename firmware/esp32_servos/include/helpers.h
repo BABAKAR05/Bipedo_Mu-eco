@@ -16,19 +16,19 @@ T clampValue(T value, T minVal, T maxVal) {
 // ============================================================
 //  angleToUs() - Convierte ángulo (grados) a microsegundos PWM
 //
-//  Usa los valores nominales (o calibrados cuando los tengas)
-//  para el servo específico.
+//  Ángulo lógico relativo al cero (1500 us). El sentido y la
+//  escala salen de SERVO_PARAMS de cada servo.
 // ============================================================
 inline float angleToUs(uint8_t servoId, float angleDeg) {
-    if (servoId >= NUM_SERVOS) return 1500.0f;  // Neutro por defecto
+    if (servoId >= NUM_SERVOS) return US_CENTER;  // Neutro por defecto
 
     const ServoParams& p = SERVO_PARAMS[servoId];
 
     // Clamp al rango seguro del servo
     float angle = clampValue(angleDeg, p.angleMin, p.angleMax);
 
-    // Conversión lineal: us = US0 + grados * US_PER_DEG
-    return US0 + angle * US_PER_DEG;
+    // us = 1500 + dir * grados * us_por_grado
+    return US_CENTER + p.dir * angle * p.usPerDeg;
 }
 
 #endif

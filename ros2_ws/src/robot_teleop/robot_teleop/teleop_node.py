@@ -198,7 +198,7 @@ class TeleopNode(Node):
         # ----------------------------------------------------
 
         self.lower_deg = [
-            0,    # Hip Roll
+            -15.0,    # Hip Roll
             -90.0,    # Hip Pitch
             -90.0     # Knee Pitch
         ]
@@ -215,9 +215,9 @@ class TeleopNode(Node):
         # ----------------------------------------------------
 
         self.servo_offset_deg = [
-            180.0,    # Hip Roll
-            135.0,    # Hip Pitch
-            135.0     # Knee
+            0.0,      # Hip Roll (cero lógico = 1500 us; el firmware convierte)
+            0.0,      # Hip Pitch
+            0.0       # Knee
         ]
 
 
